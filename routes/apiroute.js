@@ -1,33 +1,34 @@
 const path = require('path');
-const mongoose = require('mongoose');
+const axios = require('axios')
 const cheerio = require('cheerio')
+const db = require('../models');
 
-
-
+module.exports = function(app) {
 app.get("/scrape", function(req, res) {
-  request("https://news.ycombinator.com/", function(error, response, html) {
-    var $ = cheerio.load(html);
-    $(".title").each(function(i, element) {
-      var title = $(element).children("a").text();
-      var link = $(element).children("a").attr("href");
-      if (title && link) {
-        db.scrapedData.insert({
-          title: title,
-          link: link
-        },
-        function(err, inserted) {
-          if (err) {
-            console.log(err);
-          }
-          else {
-            console.log(inserted);
-          }
-        });
-      }
-    });
-  });
+  axios.get("http://www.echojs.com/").then(function(response) {
+    var $ = cheerio.load(response.data);
 
-  res.send('Scrape Complete');
+    $("article h2").each(function(i, element) {
+      var result = {};
+
+      result.title = $(this)
+        .children("a")
+        .text();
+      result.link = $(this)
+        .children("a")
+        .attr("href");
+
+      db.Article.create(result)
+        .then(function(dbArticle) {
+          console.log(dbArticle);
+        })
+        .catch(function(err) {
+          return res.json(err);
+        });
+    });
+
+    res.send("Scrape Complete");
+  });
 });
 
 app.get("/articles", function(req, res) {
@@ -63,3 +64,4 @@ app.post("/articles/:id", function(req, res) {
       res.json(err);
     });
 });
+}
